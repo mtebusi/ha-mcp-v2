@@ -1,0 +1,65 @@
+#include <tunables/global>
+
+profile ha_mcp_server flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+  #include <abstractions/python>
+  #include <abstractions/bash>
+  #include <abstractions/openssl>
+
+  # Capabilities
+  capability net_bind_service,
+  capability setgid,
+  capability setuid,
+
+  # Network access
+  network tcp,
+  network inet stream,
+  network inet6 stream,
+
+  # S6-Overlay
+  /init ix,
+  /bin/** ix,
+  /usr/bin/** ix,
+  /usr/lib/python*/** mr,
+  /usr/local/lib/python*/** mr,
+  
+  # Bashio
+  /usr/lib/bashio/** ix,
+  /tmp/** rw,
+  
+  # Access to SSL certificates
+  /ssl/** r,
+  
+  # Access to addon data
+  /data/** rw,
+  
+  # Access to addon config
+  /config/** r,
+  
+  # Access to options.json
+  /data/options.json r,
+  
+  # Access to Home Assistant API
+  /api/** rw,
+  
+  # Python
+  /usr/local/bin/python* ix,
+  
+  # Application
+  /app/** r,
+  /app/**/*.py mr,
+  
+  # Process management
+  /proc/sys/net/core/somaxconn r,
+  /proc/*/stat r,
+  /sys/devices/system/cpu/ r,
+  
+  # Temporary files
+  /var/tmp/** rw,
+  
+  # Deny access to sensitive areas
+  deny /root/** rwx,
+  deny /etc/passwd rwx,
+  deny /etc/shadow rwx,
+  deny /proc/*/mem rwx,
+}

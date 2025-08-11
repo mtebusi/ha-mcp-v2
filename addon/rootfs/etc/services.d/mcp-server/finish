@@ -1,0 +1,10 @@
+#!/usr/bin/with-contenv bashio
+# ==============================================================================
+# Take down the MCP server
+# ==============================================================================
+
+bashio::log.info "MCP Server stopped"
+
+if [[ "$1" -ne 0 ]] && [[ "$1" -ne 256 ]]; then
+    bashio::log.warning "MCP Server crashed with exit code $1"
+fi

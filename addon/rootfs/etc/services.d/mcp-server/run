@@ -1,0 +1,58 @@
+#!/usr/bin/with-contenv bashio
+# ==============================================================================
+# Start the MCP server
+# ==============================================================================
+
+# Get configuration options
+declare log_level
+declare ssl
+declare certfile
+declare keyfile
+
+log_level=$(bashio::config 'log_level')
+ssl=$(bashio::config 'ssl')
+
+bashio::log.info "Starting HomeAssistant MCP Server..."
+
+# Build command arguments
+ARGS=""
+
+# Set log level
+case "${log_level}" in
+    debug)
+        ARGS="${ARGS} --debug"
+        ;;
+    warning)
+        ARGS="${ARGS} --log-level WARNING"
+        ;;
+    error)
+        ARGS="${ARGS} --log-level ERROR"
+        ;;
+    *)
+        ARGS="${ARGS} --log-level INFO"
+        ;;
+esac
+
+# SSL configuration
+if bashio::config.true 'ssl'; then
+    certfile=$(bashio::config 'certfile')
+    keyfile=$(bashio::config 'keyfile')
+    
+    ARGS="${ARGS} --ssl"
+    
+    if bashio::config.has_value 'certfile'; then
+        ARGS="${ARGS} --certfile /ssl/${certfile}"
+    fi
+    
+    if bashio::config.has_value 'keyfile'; then
+        ARGS="${ARGS} --keyfile /ssl/${keyfile}"
+    fi
+fi
+
+# Get supervisor token
+SUPERVISOR_TOKEN="${SUPERVISOR_TOKEN}"
+ARGS="${ARGS} --supervisor-token ${SUPERVISOR_TOKEN}"
+
+# Start the application
+cd /app || exit 1
+exec python3 -m server ${ARGS}

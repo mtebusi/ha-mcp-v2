@@ -1,0 +1,131 @@
+name: Lint and Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  python-lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff black mypy
+          pip install -r src/requirements.txt
+      
+      - name: Run ruff
+        run: ruff check src/
+      
+      - name: Check black formatting
+        run: black --check src/
+      
+      - name: Run mypy
+        run: mypy src/ --ignore-missing-imports
+  
+  yaml-lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      
+      - name: Install yamllint
+        run: pip install yamllint
+      
+      - name: Lint YAML files
+        run: |
+          yamllint addon/
+          yamllint .github/
+          yamllint repository.yaml
+  
+  dockerfile-lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: addon/Dockerfile
+  
+  addon-lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      
+      - name: Install HomeAssistant for validation
+        run: |
+          pip install homeassistant
+      
+      - name: Validate addon configuration
+        run: |
+          python -c "
+          import yaml
+          import sys
+          
+          # Load and validate config.yaml
+          with open('addon/config.yaml', 'r') as f:
+              config = yaml.safe_load(f)
+          
+          # Check required fields
+          required = ['name', 'version', 'slug', 'description', 'arch']
+          for field in required:
+              if field not in config:
+                  print(f'Missing required field: {field}')
+                  sys.exit(1)
+          
+          # Validate schema
+          if 'schema' in config:
+              for key, value in config['schema'].items():
+                  if key not in config.get('options', {}):
+                      print(f'Schema key {key} not in options')
+          
+          print('Addon configuration valid')
+          "
+  
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run Trivy security scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'

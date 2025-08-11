@@ -1,0 +1,38 @@
+name: "HomeAssistant MCP Server"
+version: "0.0.1"
+slug: "ha_mcp_server"
+description: "MCP server for Claude Desktop integration with HomeAssistant"
+url: "https://github.com/mtebusi/ha-mcp-v2"
+arch:
+  - amd64
+  - aarch64
+  - armhf
+  - armv7
+  - i386
+startup: services
+boot: auto
+init: false
+hassio_api: true
+homeassistant_api: true
+auth_api: true
+ingress: true
+ingress_port: 8089
+ingress_entry: /sse
+panel_icon: mdi:robot
+panel_title: MCP Server
+ports:
+  8089/tcp: 8089
+ports_description:
+  8089/tcp: MCP SSE Server
+options:
+  log_level: info
+  ssl: true
+  certfile: fullchain.pem
+  keyfile: privkey.pem
+schema:
+  log_level: list(debug|info|warning|error)
+  ssl: bool
+  certfile: str?
+  keyfile: str?
+image: "ghcr.io/mtebusi/{arch}-ha-mcp-v2"
+apparmor: true
