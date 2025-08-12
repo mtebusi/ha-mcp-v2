@@ -2,7 +2,7 @@ ARG BUILD_FROM
 FROM $BUILD_FROM
 
 # Set shell
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+SHELL ["/bin/sh", "-c"]
 
 # Setup base system
 RUN \
@@ -22,7 +22,10 @@ RUN \
 COPY rootfs /
 
 # Copy application
-COPY src /app
+COPY *.py /app/
+COPY tools /app/tools/
+COPY ha_api /app/ha_api/
+COPY mcp /app/mcp/
 
 # Set working directory
 WORKDIR /app
