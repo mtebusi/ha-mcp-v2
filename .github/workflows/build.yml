@@ -1,4 +1,4 @@
-name: Build Multi-Architecture
+name: Build and Publish Add-on
 
 on:
   push:
@@ -7,10 +7,10 @@ on:
       - 'v*'
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build:
@@ -41,56 +41,40 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: Extract metadata
-        id: meta
+      - name: Get addon version
+        id: version
         run: |
           VERSION=$(grep "^version:" addon/config.yaml | cut -d'"' -f2)
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "Building version: ${VERSION}"
+          echo "Building addon version: ${VERSION}"
       
-      - name: Get build args
-        id: build_args
+      - name: Determine base image
+        id: base
         run: |
-          echo "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
-          echo "BUILD_REF=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
-          echo "BUILD_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          case "${{ matrix.arch }}" in
+            amd64)   echo "image=ghcr.io/home-assistant/amd64-base:latest" >> $GITHUB_OUTPUT ;;
+            aarch64) echo "image=ghcr.io/home-assistant/aarch64-base:latest" >> $GITHUB_OUTPUT ;;
+            armhf)   echo "image=ghcr.io/home-assistant/armhf-base:latest" >> $GITHUB_OUTPUT ;;
+            armv7)   echo "image=ghcr.io/home-assistant/armv7-base:latest" >> $GITHUB_OUTPUT ;;
+            i386)    echo "image=ghcr.io/home-assistant/i386-base:latest" >> $GITHUB_OUTPUT ;;
+          esac
       
-      - name: Build addon for ${{ matrix.arch }}
+      - name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: addon/
-          platforms: linux/${{ matrix.arch }}
+          file: addon/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.arch }}-ha-mcp-v2:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.arch }}-ha-mcp-v2:${{ steps.meta.outputs.version }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.arch }}-ha-mcp-v2:${{ steps.version.outputs.version }}
           build-args: |
-            BUILD_FROM=ghcr.io/home-assistant/${{ matrix.arch }}-base-python:3.12-alpine
+            BUILD_FROM=${{ steps.base.outputs.image }}
             BUILD_ARCH=${{ matrix.arch }}
-            BUILD_DATE=${{ steps.build_args.outputs.BUILD_DATE }}
-            BUILD_REF=${{ steps.build_args.outputs.BUILD_REF }}
-            BUILD_VERSION=${{ steps.build_args.outputs.BUILD_VERSION }}
+            BUILD_DATE=${{ github.run_id }}
+            BUILD_REF=${{ github.sha }}
+            BUILD_VERSION=${{ steps.version.outputs.version }}
             BUILD_NAME=HomeAssistant MCP Server
             BUILD_DESCRIPTION=MCP server for Claude Desktop integration
             BUILD_REPOSITORY=${{ github.repository }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
   
-  publish-addon:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      
-      - name: Update repository metadata
-        run: |
-          # Update repository.yaml with latest version
-          echo "Repository metadata updated"
-      
-      - name: Create addon manifest
-        run: |
-          # Create/update addon manifest for repository
-          echo "Addon manifest created"

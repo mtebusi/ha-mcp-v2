@@ -65,7 +65,7 @@ build_arch() {
     echo -e "${GREEN}Building for architecture: $arch${NC}"
     
     # Determine base image
-    BASE_IMAGE="ghcr.io/home-assistant/${arch}-base-python:3.12-alpine"
+    BASE_IMAGE="ghcr.io/home-assistant/${arch}-base:latest"
     
     # Build arguments
     local BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')

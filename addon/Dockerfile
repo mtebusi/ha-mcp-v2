@@ -4,9 +4,11 @@ FROM $BUILD_FROM
 # Set shell
 SHELL ["/bin/sh", "-c"]
 
-# Setup base system
+# Setup base system and Python 3.12
 RUN \
     apk add --no-cache \
+        python3 \
+        py3-pip \
         nginx \
         openssl
 
@@ -15,7 +17,7 @@ COPY requirements.txt /tmp/
 
 # Install Python dependencies
 RUN \
-    pip3 install --no-cache-dir -r /tmp/requirements.txt \
+    python3 -m pip install --no-cache-dir --break-system-packages -r /tmp/requirements.txt \
     && rm -f /tmp/requirements.txt
 
 # Copy root filesystem
