@@ -65,18 +65,12 @@ build_arch() {
     echo -e "${GREEN}Building for architecture: $arch${NC}"
     
     # Determine base image
-    BASE_IMAGE="ghcr.io/home-assistant/${arch}-base-python:3.12"
+    BASE_IMAGE="ghcr.io/home-assistant/${arch}-base-python:3.12-alpine"
     
     # Build arguments
-    BUILD_ARGS=""
-    BUILD_ARGS="${BUILD_ARGS} --build-arg BUILD_FROM=${BASE_IMAGE}"
-    BUILD_ARGS="${BUILD_ARGS} --build-arg BUILD_ARCH=${arch}"
-    BUILD_ARGS="${BUILD_ARGS} --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-    BUILD_ARGS="${BUILD_ARGS} --build-arg BUILD_REF=$(git rev-parse --short HEAD)"
-    BUILD_ARGS="${BUILD_ARGS} --build-arg BUILD_VERSION=$(cat addon/config.yaml | grep 'version:' | cut -d'"' -f2)"
-    BUILD_ARGS="${BUILD_ARGS} --build-arg BUILD_NAME='HomeAssistant MCP Server'"
-    BUILD_ARGS="${BUILD_ARGS} --build-arg BUILD_DESCRIPTION='MCP server for Claude Desktop integration'"
-    BUILD_ARGS="${BUILD_ARGS} --build-arg BUILD_REPOSITORY='https://github.com/mtebusi/ha-mcp-v2'"
+    local BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+    local BUILD_REF=$(git rev-parse --short HEAD)
+    local BUILD_VERSION=$(cat addon/config.yaml | grep 'version:' | cut -d'"' -f2)
     
     # Image name
     IMAGE_NAME="ha-mcp-v2-${arch}:${TAG}"
@@ -84,8 +78,15 @@ build_arch() {
     # Build command
     echo "Building ${IMAGE_NAME}..."
     docker build \
-        ${BUILD_ARGS} \
-        -t ${IMAGE_NAME} \
+        --build-arg BUILD_FROM="${BASE_IMAGE}" \
+        --build-arg BUILD_ARCH="${arch}" \
+        --build-arg BUILD_DATE="${BUILD_DATE}" \
+        --build-arg BUILD_REF="${BUILD_REF}" \
+        --build-arg BUILD_VERSION="${BUILD_VERSION}" \
+        --build-arg BUILD_NAME="HomeAssistant MCP Server" \
+        --build-arg BUILD_DESCRIPTION="MCP server for Claude Desktop integration" \
+        --build-arg BUILD_REPOSITORY="https://github.com/mtebusi/ha-mcp-v2" \
+        -t "${IMAGE_NAME}" \
         -f addon/Dockerfile \
         addon/
     

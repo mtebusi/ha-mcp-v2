@@ -43,15 +43,10 @@ jobs:
       
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha,prefix={{branch}}-
+        run: |
+          VERSION=$(grep "^version:" addon/config.yaml | cut -d'"' -f2)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Building version: ${VERSION}"
       
       - name: Get build args
         id: build_args
@@ -66,10 +61,11 @@ jobs:
           context: addon/
           platforms: linux/${{ matrix.arch }}
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.arch }}-ha-mcp-v2:latest
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.arch }}-ha-mcp-v2:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.arch }}-ha-mcp-v2:${{ steps.meta.outputs.version }}
           build-args: |
-            BUILD_FROM=ghcr.io/home-assistant/${{ matrix.arch }}-base-python:3.12
+            BUILD_FROM=ghcr.io/home-assistant/${{ matrix.arch }}-base-python:3.12-alpine
             BUILD_ARCH=${{ matrix.arch }}
             BUILD_DATE=${{ steps.build_args.outputs.BUILD_DATE }}
             BUILD_REF=${{ steps.build_args.outputs.BUILD_REF }}
